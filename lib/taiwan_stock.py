@@ -53,6 +53,30 @@ class TaiwanStock:
 
         return df
     
+    # 從台灣證券交易所的網站爬取個股歷史資料
+    def crawlStockHistoryFromTwse(self, df):
+        for i in range(len(df)):
+            stock_num = df.at[i, '股票代號']
+            start_year = int(df.at[i, '上市日'].split('/')[0])
+
+            if start_year < 2010:
+                start_year = 2010
+
+            for year in range(start_year, 2022):
+                for month in range(1, 13):
+                    try:
+                        headers = self.getHeaders()
+                        date = "{:d}{:02d}01".format(year, month)
+                        url = 'https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=html&date={}&stockNo={}'.format(date, stock_num)
+                        print('[INFO] 爬取 <{}> 的資料'.format(url))
+                        dfs = read_html(url)
+                        print(dfs)
+
+                    except Exception as e:
+                        print('[ERROR] {}'.format(e))
+
+                    sleep(10)
+
     def getHeaders(self):
         ua = UserAgent()
         user_agent = ua.random
