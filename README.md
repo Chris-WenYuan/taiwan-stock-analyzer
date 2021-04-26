@@ -5,17 +5,23 @@
 ## 當前專案進度
 
 1. 抓取台灣上市上櫃的股票清單並存入自建的 MySQL 資料庫 (20210426)
-2. 根據抓到的台灣上市上櫃股票清單去抓取其歷史紀錄 (未完成)
-
-<br/>
+2. 根據抓到的台灣上市上櫃股票清單去爬每支股票的歷史紀錄 (未完成)
 
 ## 使用方法
 
 ### 安裝 MySQL
 
-在電腦上安裝 MySQL 資料庫以及 Anaconda，安裝過程略過不再贅述。
+在電腦上安裝 MySQL 資料庫，安裝過程略過不再贅述。
 
 ### 執行程式
+
+打開 `index.js` 檔案，並找到下面這行程式碼，其中的 `host`、`user`、`password`、`database` 參數是我本地端 MySQL 資料庫的設定，你需要依你自己的設定去更改。：
+
+```python
+ms.connectDB(host='localhost', user='chris', password='850806', database='stock')
+```
+
+修改完後可以執行以下指令來運行程式。
 
 ```shell
 $ python index.js
