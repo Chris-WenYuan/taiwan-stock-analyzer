@@ -10,7 +10,7 @@ class TaiwanStock:
     
     def getStockList(self, filename='stockList.csv'):
         # 從 <https://isin.twse.com.tw/isin/C_public.jsp?strMode=2> 抓取台灣上市股票清單
-        headers = self.getHeaders()
+        headers = self._getHeaders()
         url = 'https://isin.twse.com.tw/isin/C_public.jsp?strMode=2'
         res = requests.get(url, headers=headers)
         df1 = read_html(res.text, encoding='big5hkscs')[0]
@@ -23,7 +23,7 @@ class TaiwanStock:
         sleep(10)
 
         # 從 <https://isin.twse.com.tw/isin/C_public.jsp?strMode=4> 抓取台灣上櫃股票清單
-        headers = self.getHeaders()
+        headers = self._getHeaders()
         url = 'https://isin.twse.com.tw/isin/C_public.jsp?strMode=4'
         res = requests.get(url, headers=headers)
         df2 = read_html(res.text, encoding='big5hkscs')[0]
@@ -53,7 +53,7 @@ class TaiwanStock:
 
         return df
     
-    # 從台灣證券交易所的網站爬取個股歷史資料
+    # 從台灣證券交易所的網站爬取上市個股歷史資料
     def crawlStockHistoryFromTwse(self, df):
         for i in range(len(df)):
             stock_num = df.at[i, '股票代號']
@@ -65,7 +65,7 @@ class TaiwanStock:
             for year in range(start_year, 2022):
                 for month in range(1, 13):
                     try:
-                        headers = self.getHeaders()
+                        headers = self._getHeaders()
                         date = "{:d}{:02d}01".format(year, month)
                         url = 'https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=html&date={}&stockNo={}'.format(date, stock_num)
                         print('[INFO] 爬取 <{}> 的資料'.format(url))
@@ -77,7 +77,7 @@ class TaiwanStock:
 
                     sleep(10)
 
-    def getHeaders(self):
+    def _getHeaders(self):
         ua = UserAgent()
         user_agent = ua.random
         headers = {'user-agent': user_agent}
