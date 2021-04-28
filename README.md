@@ -4,34 +4,34 @@
 
 ## 當前專案進度
 
-1. 抓取台灣上市上櫃的股票清單並存入自建的 MySQL 資料庫 (20210426)
-2. 根據抓到的台灣上市上櫃股票清單去爬每支股票的歷史紀錄 (20210428)
+1. 抓取台灣上市上櫃的股票清單並儲存為 /data/stockList.csv (20210426)
+2. 根據抓到的台灣上市上櫃股票清單去爬上面每支股票的歷史紀錄 (20210428)
 
 ## 使用步驟
 
 使用 `git clone` 指令下載本專案。
 
 ```shell
-$ git clone https://github.com/Chris-WenYuan/investment-strategy.git
+$ git clone https://github.com/Chris-WenYuan/taiwan-stock-analyzer.git
 ```
 
 使用 `cd` 進入專案資料夾中。
 
 ```shell
-$ cd investment-strategy
-(investment-strategy)$ 
+$ cd taiwan-stock-analyzer
+(taiwan-stock-analyzer)$ 
 ```
 
 利用 `requirements.txt` 安裝相關套件。
 
 ```shell
-(investment-strategy)$ pip install -r requirements.txt
+(taiwan-stock-analyzer)$ pip install -r requirements.txt
 ```
 
 `index.py` 為本專案的主程式，直接執行即可。
 
 ```shell
-(investment-strategy)$ python index.py
+(taiwan-stock-analyzer)$ python index.py
 ```
 
-![](https://i.imgur.com/bvNKrcD.png)
+![](https://i.imgur.com/xlMXK0p.png)
