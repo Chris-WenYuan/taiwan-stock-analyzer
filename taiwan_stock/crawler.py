@@ -6,11 +6,8 @@ from tqdm import tqdm
 from time import sleep
 from bs4 import BeautifulSoup
 from pandas_datareader import data
-from pandas import read_html, concat, DataFrame, set_option
 from fake_useragent import UserAgent
-
-set_option('display.unicode.ambiguous_as_wide', True)
-set_option('display.unicode.east_asian_width', True)
+from pandas import read_html, concat, DataFrame, set_option
 
 """Crawl taiwan stock list"""
 def getStockList():
@@ -87,28 +84,25 @@ def getAllStockHistory(df, markets, types):
     
     print('[crawler.getAllStockHistory] 完成\n')
 
-'''
 """Get stock real time information"""
 def getRealTime(sid):
+    print('[crawler.getRealTime] 取得選定之個股的當前股價：')
+
     result = []
-    
-    while True:
-        result = []
-        for stock_numbers in sid:
-            response = requests.get('https://tw.stock.yahoo.com/q/q?s=' + stock_numbers)
-            soup = BeautifulSoup(response.text.replace('加到投資組合', ''), 'lxml')
-            stock_date = soup.find('font', {'class', 'tt'}).getText().strip()[-9:]
-            tables = soup.find_all('table')[2]
-            tds = tables.find_all('td')[0:11]
-            result.append((stock_date,) + tuple(td.getText().strip() for td in tds))
-
-            sleep(1)
+    for stock_numbers in sid:
+        response = requests.get('https://tw.stock.yahoo.com/q/q?s=' + stock_numbers)
+        soup = BeautifulSoup(response.text.replace('加到投資組合', ''), 'lxml')
+        stock_date = soup.find('font', {'class', 'tt'}).getText().strip()[-9:]
+        tables = soup.find_all('table')[2]
+        tds = tables.find_all('td')[0:11]
+        result.append((stock_date,) + tuple(td.getText().strip() for td in tds))
+        sleep(1)
         
-        df = DataFrame(result, columns=['日期', '股票代號', '時間', '成交', '買進', '賣出', '漲跌', '張數', '昨收', '開盤', '最高', '最低'])
-        print(df)
+    df = DataFrame(result, columns=['日期', '股票代號', '時間', '成交', '買進', '賣出', '漲跌', '張數', '昨收', '開盤', '最高', '最低'])
+    print(df)
+    print('[crawler.getRealTime] 完成\n')
 
-    return result
-'''
+    return df
 
 """Get fake web headers"""
 def _getHeaders():
@@ -119,7 +113,7 @@ def _getHeaders():
 
 """Fetch all stock history of specific market"""
 def _fetchAll(sid, listed_date, market):
-    base_path = ''
+    base_path = os.path.join(os.path.abspath(os.getcwd()), 'data', 'history')
 
     for i in tqdm(range(len(sid)), desc='[crawler._fetchAll]'):
         try:
@@ -131,7 +125,6 @@ def _fetchAll(sid, listed_date, market):
             df = data.get_data_yahoo(sid[i]+market, start_date, end_date)
 
             filename = '{}.csv'.format(sid[i])
-            base_path = os.path.join(os.path.abspath(os.getcwd()), 'data', 'history')
             if not os.path.exists(base_path):
                 os.mkdir(base_path)
             file_path = os.path.join(base_path, filename)
@@ -141,5 +134,5 @@ def _fetchAll(sid, listed_date, market):
             pass
 
         sleep(0.1)
-    
+
     print('[crawler._fetchAll] 個股歷史紀錄已儲存至 {}'.format(base_path))
