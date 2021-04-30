@@ -2,6 +2,8 @@ import os
 import requests
 import datetime
 
+from requests_html import HTMLSession
+from datetime import datetime, date
 from tqdm import tqdm
 from time import sleep
 from bs4 import BeautifulSoup
@@ -104,6 +106,33 @@ def getRealTime(sid):
 
     return df
 
+"""Get financial news"""
+def getAllNews(start_date, end_date):
+    NEWS_CATEGORY_API = 'https://news.cnyes.com/api/v3/news/category/tw_stock?startAt={}&endAt={}&limit=9999999'
+    NEWS_CONTENT_URL = 'https://news.cnyes.com/news/id/{}?exp=a'
+    base_path = os.path.join(os.path.abspath(os.getcwd()), 'data', 'cnyes_news')
+    filename = '{}_{}.txt'.format(start_date, end_date)
+
+    start_date_second = int(datetime.strptime(start_date, '%Y-%m-%d %H:%M:%S').timestamp())
+    end_date_second = int(datetime.strptime(end_date, '%Y-%m-%d %H:%M:%S').timestamp())
+    url = NEWS_CATEGORY_API.format(start_date_second, end_date_second)
+    print(url)
+    
+    session = HTMLSession()
+    response = session.get(url).json()
+    posts = response['items']['data']
+    for post in posts:
+        postSession = HTMLSession()
+        article_url = NEWS_CONTENT_URL.format(post['newsId'])
+        print('---{}---'.format(post['title']))
+        postResponse = postSession.get(article_url)
+        postResponse.html.render()
+        print(postResponse.html.find('div[itemprop="articleBody"]')[0].text)
+        try:
+            print(postResponse.html.find('section[class="_3EMg"]')[0].text)
+        except:
+            pass
+
 """Get fake web headers"""
 def _getHeaders():
     ua = UserAgent()
@@ -120,9 +149,9 @@ def _fetchAll(sid, listed_date, market):
             start_date = listed_date[i].replace('/', '-')
             if int(start_date.split('-')[0]) < 2000:
                 start_date = '2000-01-01'
-            end_date = datetime.date.today()
+            end_date = date.today()
 
-            df = data.get_data_yahoo(sid[i]+market, start_date, end_date)
+            df = data.get_data_yahoo(sid[i]+market, '2010-01-01', end_date)
 
             filename = '{}.csv'.format(sid[i])
             if not os.path.exists(base_path):
