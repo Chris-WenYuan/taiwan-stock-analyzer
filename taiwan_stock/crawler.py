@@ -1,15 +1,19 @@
 import os
 import requests
-import datetime
 
-from requests_html import HTMLSession
-from datetime import datetime, date
 from tqdm import tqdm
+from re import findall
 from time import sleep
 from bs4 import BeautifulSoup
 from pandas_datareader import data
 from fake_useragent import UserAgent
+from requests_html import HTMLSession
+from datetime import datetime, date, timedelta
 from pandas import read_html, concat, DataFrame, set_option
+
+# 使 dataframe 輸出中文字時也能對齊
+set_option('display.unicode.ambiguous_as_wide', True)
+set_option('display.unicode.east_asian_width', True)
 
 """Crawl taiwan stock list"""
 def getStockList():
@@ -55,7 +59,7 @@ def getStockList():
     df = df.set_index('股票代號')
 
     filename = 'stockList.csv'
-    base_path = os.path.join(os.path.abspath(os.getcwd()), 'data')
+    base_path = os.path.join(os.path.abspath(os.getcwd()), 'output')
     if not os.path.exists(base_path):
         os.mkdir(base_path)
     file_path = os.path.join(base_path, filename)
@@ -63,7 +67,6 @@ def getStockList():
 
     print('[crawler.getStockList] 上市櫃股票股票清單儲存至 {}'.format(file_path))
     print('[crawler.getStockList] 完成\n')
-
     return df
 
 """Get taiwan stock history"""
@@ -99,39 +102,64 @@ def getRealTime(sid):
         tds = tables.find_all('td')[0:11]
         result.append((stock_date,) + tuple(td.getText().strip() for td in tds))
         sleep(1)
-        
     df = DataFrame(result, columns=['日期', '股票代號', '時間', '成交', '買進', '賣出', '漲跌', '張數', '昨收', '開盤', '最高', '最低'])
-    print(df)
-    print('[crawler.getRealTime] 完成\n')
 
+    print('[crawler.getRealTime] 完成\n')
     return df
 
 """Get financial news"""
-def getAllNews(start_date, end_date):
-    NEWS_CATEGORY_API = 'https://news.cnyes.com/api/v3/news/category/tw_stock?startAt={}&endAt={}&limit=9999999'
+def getNews(start_date, end_date):
+    NEWS_CATEGORY_API = 'https://news.cnyes.com/api/v3/news/category/tw_stock?startAt={}&endAt={}&limit=30'
     NEWS_CONTENT_URL = 'https://news.cnyes.com/news/id/{}?exp=a'
-    base_path = os.path.join(os.path.abspath(os.getcwd()), 'data', 'cnyes_news')
+    base_path = os.path.join(os.path.abspath(os.getcwd()), 'output', 'news')
     filename = '{}_{}.txt'.format(start_date, end_date)
 
-    start_date_second = int(datetime.strptime(start_date, '%Y-%m-%d %H:%M:%S').timestamp())
-    end_date_second = int(datetime.strptime(end_date, '%Y-%m-%d %H:%M:%S').timestamp())
-    url = NEWS_CATEGORY_API.format(start_date_second, end_date_second)
-    print(url)
-    
-    session = HTMLSession()
-    response = session.get(url).json()
-    posts = response['items']['data']
-    for post in posts:
-        postSession = HTMLSession()
-        article_url = NEWS_CONTENT_URL.format(post['newsId'])
-        print('---{}---'.format(post['title']))
-        postResponse = postSession.get(article_url)
-        postResponse.html.render()
-        print(postResponse.html.find('div[itemprop="articleBody"]')[0].text)
-        try:
-            print(postResponse.html.find('section[class="_3EMg"]')[0].text)
-        except:
-            pass
+    current_date = datetime.strptime(start_date, '%Y-%m-%d %H:%M:%S')
+    end_date = datetime.strptime(end_date, '%Y-%m-%d %H:%M:%S')
+
+    if not os.path.exists(base_path):
+        os.mkdir(base_path)
+
+    print('[crawler.getNews] 準備抓取台股相關新聞，並儲存至 {}'.format(base_path))
+    while current_date <= end_date:
+        current_date_second = int(current_date.timestamp())
+        url = NEWS_CATEGORY_API.format(current_date_second, current_date_second)
+        filename = current_date.strftime('%Y-%m-%d.txt')
+
+        file_path = os.path.join(base_path, filename)
+        f = open(file_path, 'w')
+        
+        print('[crawler.getNews] 抓取 {} 的新聞'.format(str(current_date).replace(' 00:00:00', '')))
+        session = HTMLSession()
+        response = session.get(url).json()
+        posts = response['items']['data']
+        pbar = tqdm(total=len(posts), desc='[crawler.getNews]')
+        for post in posts:
+            try:
+                postSession = HTMLSession()
+                article_url = NEWS_CONTENT_URL.format(post['newsId'])
+                title = post['title'].replace('\n', '')
+                f.write('[文章標題]: {}\n'.format(title))
+                postResponse = postSession.get(article_url)
+                postResponse.html.render(sleep=0.1, timeout=30)
+                article = postResponse.html.find('div[itemprop="articleBody"]')[0].text.replace('\n', '')
+                f.write('[文章內容]: {}\n'.format(article))
+                try:
+                    relation = postResponse.html.find('section[class="_3EMg"]')[0].text.replace('\n', '').replace('相關個股', '')
+                    stocks = findall(u'[\u4e00-\u9fa5]+[-]?[A-Z]*', relation)
+                    f.write('[相關個股]: {}\n'.format(','.join(stocks)))
+                    f.write('--------------------\n')
+                except:
+                    f.write('[相關個股]: \n')
+                    f.write('--------------------\n')
+            except Exception as e:
+                pass
+            pbar.update(1)
+        f.close()
+        pbar.close()
+
+        current_date += timedelta(days=1)
+    print('[crawler.getNews] 完成\n')
 
 """Get fake web headers"""
 def _getHeaders():
@@ -142,7 +170,7 @@ def _getHeaders():
 
 """Fetch all stock history of specific market"""
 def _fetchAll(sid, listed_date, market):
-    base_path = os.path.join(os.path.abspath(os.getcwd()), 'data', 'history')
+    base_path = os.path.join(os.path.abspath(os.getcwd()), 'output', 'history')
 
     for i in tqdm(range(len(sid)), desc='[crawler._fetchAll]'):
         try:

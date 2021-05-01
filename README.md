@@ -4,8 +4,10 @@
 
 ## 當前專案進度
 
-1. 抓取台灣上市上櫃的股票清單並儲存為 /data/stockList.csv (20210426)
-2. 根據抓到的股票清單去爬上面每支股票的歷史紀錄並存入 /data/hostory/ (20210428)
+1. 抓取台灣上市上櫃的股票清單並儲存為 /output/stockList.csv (20210426)
+2. 根據抓到的股票清單去爬上面每支股票的歷史紀錄並存入 /output/hostory/ (20210428)
+3. 取得指定個股的當前股價資訊 (20210429)
+4. 抓取財經新聞並存入 /output/news/ (20210501)
 
 ## 使用步驟
 
@@ -34,4 +36,10 @@ $ cd taiwan-stock-analyzer
 (taiwan-stock-analyzer)$ python index.py
 ```
 
-![](https://i.imgur.com/xlMXK0p.png)
+![](https://i.imgur.com/ce1TRnc.png)
+
+## 參考資料
+
+- [台灣證券交易所](https://www.twse.com.tw/zh/)
+- [Yahoo奇摩股市](https://tw.stock.yahoo.com/)
+- [Anue鉅亨網](https://www.cnyes.com/)
