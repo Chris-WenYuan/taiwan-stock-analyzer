@@ -11,7 +11,6 @@ from requests_html import HTMLSession
 from datetime import datetime, date, timedelta
 from pandas import read_html, concat, DataFrame, set_option
 
-# 使 dataframe 輸出中文字時也能對齊
 set_option('display.unicode.ambiguous_as_wide', True)
 set_option('display.unicode.east_asian_width', True)
 
@@ -160,6 +159,13 @@ def getNews(start_date, end_date):
 
         current_date += timedelta(days=1)
     print('[crawler.getNews] 完成\n')
+
+"""Get three institutional investors information"""
+def getInstitutionalInvestors():
+    TWSE_URL = 'http://www.twse.com.tw/fund/T86?response=json&date={}&selectType=ALL' # ex: 20210429
+    TPEX_URL = 'http://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php?l=zh-tw&se=AL&t=D&d={}' # ex: 110/04/29
+
+    
 
 """Get fake web headers"""
 def _getHeaders():

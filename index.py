@@ -45,4 +45,4 @@ if __name__ == '__main__':
     result_df = crawler.getRealTime(sid) # 根據指定的股票代號(sid)返回其當前股價
     print(result_df)
 
-    crawler.getNews(start_date='2021-04-02 00:00:00', end_date='2021-04-02 23:59:00') # 抓取時間範圍內(start_date ~ end_date)的台股新聞，若
+    crawler.getNews(start_date='2021-04-02 00:00:00', end_date='2021-04-02 23:59:00') # 抓取時間範圍內(start_date ~ end_date)的台股新聞
