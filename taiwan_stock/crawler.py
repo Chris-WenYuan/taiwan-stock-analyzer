@@ -1,4 +1,5 @@
 import os
+import json
 import requests
 
 from tqdm import tqdm
@@ -165,7 +166,28 @@ def getInstitutionalInvestors():
     TWSE_URL = 'http://www.twse.com.tw/fund/T86?response=json&date={}&selectType=ALL' # ex: 20210429
     TPEX_URL = 'http://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php?l=zh-tw&se=AL&t=D&d={}' # ex: 110/04/29
 
-    
+    # Get listed company three institutional investors information
+    headers = _getHeaders()
+    url = TWSE_URL.format('20210429')
+    res = requests.get(url, headers=headers)
+    res = json.loads(res.text)
+    res = dict((k, res[k]) for k in ('fields','data') if k in res) # Get sub-dict from res with keys=['fields', 'data']
+    df = DataFrame(res['data'], columns=res['fields'])
+    print(df)
+
+    # Get OCT three institutional investors information
+    headers = _getHeaders()
+    url = TPEX_URL.format('110/05/03')
+    res = requests.get(url, headers=headers)
+    res = json.loads(res.text)
+    res = dict((k, res[k]) for k in ('reportTitle', 'aaData') if k in res) # Get sub-dict from res with keys=['aaData']
+    columns = ['證券代號', '證券名稱', '外陸資買進股數(不含外資自營商)', '外陸資賣出股數(不含外資自營商)', '外陸資買賣超股數(不含外資自營商)', \
+               '外資自營商買進股數', '外資自營商賣出股數', '外資自營商買賣超股數', '外陸資買進股數', '外陸資賣出股數', '外陸資買賣超股數', \
+               '投信買進股數', '投信賣出股數', '投信買賣超股數', '自營商買進股數(自行買賣)', '自營商賣出股數(自行買賣)', '自營商買賣超股數(自行買賣)', \
+               '自營商買進股數(避險)', '自營商賣出股數(避險)', '自營商買賣超股數(避險)', '自營商買進股數', '自營商賣出股數', '自營商買賣超股數', \
+               '三大法人買賣超股數合計', 'unknown']
+    df = DataFrame(res['aaData'], columns=columns)
+    print(df)
 
 """Get fake web headers"""
 def _getHeaders():

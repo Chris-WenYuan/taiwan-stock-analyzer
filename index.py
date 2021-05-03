@@ -6,7 +6,7 @@ set_option('display.unicode.ambiguous_as_wide', True)
 set_option('display.unicode.east_asian_width', True)
 
 if __name__ == '__main__': 
-
+    '''
     df = crawler.getStockList() # 取得台灣上市上櫃股票清單並儲存在 /output/stockList.csv
 
     # -----------------------------------------------------------
@@ -46,3 +46,6 @@ if __name__ == '__main__':
     print(result_df)
 
     crawler.getNews(start_date='2021-04-02 00:00:00', end_date='2021-04-02 23:59:00') # 抓取時間範圍內(start_date ~ end_date)的台股新聞
+    '''
+    
+    crawler.getInstitutionalInvestors()
