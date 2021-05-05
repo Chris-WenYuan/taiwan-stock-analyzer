@@ -2,6 +2,7 @@ import os
 import json
 import requests
 
+from curses import wrapper
 from tqdm import tqdm
 from re import findall
 from time import sleep
@@ -87,7 +88,7 @@ def getAllStockHistories(df, markets, types):
                 market = '.TW'
             elif row['市場別'] == '上櫃':
                 market = '.TWO'
-            history_df = data.get_data_yahoo(sid+market, '2017-02-06', date.today())
+            history_df = data.get_data_yahoo(sid+market, '2000-01-01', date.today().strftime('%Y-%m-%d'))
             
             if row['類型'] == '股票':
                 base_path = os.path.join(os.path.abspath(os.getcwd()), 'output', '歷史股價', row['市場別'], row['類型'], row['產業別'])
@@ -107,23 +108,9 @@ def getAllStockHistories(df, markets, types):
     print('[crawler.getAllStockHistories] 個股歷史紀錄儲存至 <./output/歷史紀錄/>')
     print('[crawler.getAllStockHistories] 完成\n')
 
-"""Get stock real time information"""
+"""Get stock real time price by given sid"""
 def getRealTime(sid):
-    print('[crawler.getRealTime] 取得選定之個股的當前股價：')
-
-    result = []
-    for stock_numbers in sid:
-        response = requests.get('https://tw.stock.yahoo.com/q/q?s=' + stock_numbers)
-        soup = BeautifulSoup(response.text.replace('加到投資組合', ''), 'lxml')
-        stock_date = soup.find('font', {'class', 'tt'}).getText().strip()[-9:]
-        tables = soup.find_all('table')[2]
-        tds = tables.find_all('td')[0:11]
-        result.append((stock_date,) + tuple(td.getText().strip() for td in tds))
-        sleep(1)
-    df = DataFrame(result, columns=['日期', '股票代號', '時間', '成交', '買進', '賣出', '漲跌', '張數', '昨收', '開盤', '最高', '最低'])
-
-    print('[crawler.getRealTime] 完成\n')
-    return df
+    wrapper(_getRealTime, sid)
 
 """Get financial news"""
 def getNews(start_date, end_date):
@@ -213,3 +200,28 @@ def _getHeaders():
     user_agent = ua.random
     headers = {'user-agent': user_agent}
     return headers
+
+"""Call by getRealTime function"""
+def _getRealTime(stdscr, sid):
+    stdscr.clear() # Clear screen
+    stdscr.addstr(0, 0, '[crawler.getRealTime] 取得選定之個股的當前股價：')
+
+    while True:
+        result = []
+        for i in range(len(sid)):
+            response = requests.get('https://tw.stock.yahoo.com/q/q?s=' + sid[i])
+            soup = BeautifulSoup(response.text.replace('加到投資組合', ''), 'lxml')
+            stock_date = soup.find('font', {'class', 'tt'}).getText().strip()[-9:]
+            tables = soup.find_all('table')[2]
+            tds = tables.find_all('td')[0:11]
+            result.append((stock_date,) + tuple(td.getText().strip() for td in tds))
+
+        df = DataFrame(result, columns=['日期', '股票代號', '時間', '成交', '買進', '賣出', '漲跌', '張數', '昨收', '開盤', '最高', '最低'])
+        rows = df.to_string().split('\n')
+
+        for i in range(len(rows)):
+            stdscr.addstr(i+1, 0, rows[i])
+
+        stdscr.refresh()
+        sleep(0.5)
+    stdscr.getkey()
