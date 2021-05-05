@@ -4,10 +4,8 @@
 
 ## 當前專案進度
 
-1. 抓取台灣上市上櫃的股票清單並儲存為 /output/stockList.csv (20210426)
-2. 根據抓到的股票清單去爬上面每支股票的歷史紀錄並存入 /output/hostory/ (20210428)
-3. 取得指定個股的當前股價資訊 (20210429)
-4. 抓取財經新聞並存入 /output/news/ (20210501)
+- 抓取台灣上市櫃股票清單，並儲存在 `./output/股票列表/stockList.csv` (2021/05/04)
+- 根據指定市場別及股票類型來抓取每檔股票的歷史紀錄，並儲存在 `./output/歷史紀錄/` (2021/05/04)
 
 ## 使用步驟
 
@@ -21,7 +19,7 @@ $ git clone https://github.com/Chris-WenYuan/taiwan-stock-analyzer.git
 
 ```shell
 $ cd taiwan-stock-analyzer
-(taiwan-stock-analyzer)$ 
+./taiwan-stock-analyzer$ 
 ```
 
 利用 `requirements.txt` 安裝相關套件。
@@ -43,3 +41,4 @@ $ cd taiwan-stock-analyzer
 - [台灣證券交易所](https://www.twse.com.tw/zh/)
 - [Yahoo奇摩股市](https://tw.stock.yahoo.com/)
 - [Anue鉅亨網](https://www.cnyes.com/)
+- [證券櫃檯買賣中心](https://www.tpex.org.tw/web/)

@@ -1,6 +1,8 @@
 import os
+import json
 import requests
 
+from curses import wrapper
 from tqdm import tqdm
 from re import findall
 from time import sleep
@@ -22,7 +24,7 @@ def getStockList():
     headers = _getHeaders()
     url = 'https://isin.twse.com.tw/isin/C_public.jsp?strMode=2'
     res = requests.get(url, headers=headers)
-    df1 = read_html(res.text, encoding='big5hkscs')[0]
+    df1 = read_html(res.text, encoding='utf8')[0]
     df1.columns = df1.iloc[0]
     df1 = df1.drop('備註', axis=1)
     df1.columns = ['股票代號及名稱', 'ISIN Code', '上市日', '市場別', '產業別', '類型']
@@ -35,7 +37,7 @@ def getStockList():
     headers = _getHeaders()
     url = 'https://isin.twse.com.tw/isin/C_public.jsp?strMode=4'
     res = requests.get(url, headers=headers)
-    df2 = read_html(res.text, encoding='big5hkscs')[0]
+    df2 = read_html(res.text, encoding='utf8')[0]
     df2.columns = df2.iloc[0]
     df2 = df2.drop('備註', axis=1)
     df2.columns = ['股票代號及名稱', 'ISIN Code', '上市日', '市場別', '產業別', '類型']
@@ -44,8 +46,8 @@ def getStockList():
 
     # Merge listed company list (df1) and OCT company list (df2)
     df = concat([df1, df2])
-    df['股票代號'] = df['股票代號及名稱'].map(lambda x:x.split('　')[0])
-    df['股票名稱'] = df['股票代號及名稱'].map(lambda x:x.split('　')[-1])
+    df['股票代號'] = df['股票代號及名稱'].map(lambda x:x.split()[0])
+    df['股票名稱'] = df['股票代號及名稱'].map(lambda x:x.split()[-1])
     df = df[['股票代號', '股票名稱', 'ISIN Code', '上市日', '市場別', '產業別', '類型']]
     df.reset_index(inplace=True, drop=True)
     df.loc[df['類型'].str.contains('ES'), '類型'] = '股票'
@@ -57,54 +59,58 @@ def getStockList():
     df.loc[df['類型'].str.contains('EP'), '類型'] = '特別股'
     df = df.set_index('股票代號')
 
+    df = df[(df.類型!='上市認購(售)權證')&(df.類型!='上櫃認購(售)權證')] # Remove the rows by 類型=('上市認購(售)權證' or '上櫃認購(售)權證')
+    df = df.sort_index() # Sort by 股票代號
+
     filename = 'stockList.csv'
-    base_path = os.path.join(os.path.abspath(os.getcwd()), 'output')
+    base_path = os.path.join(os.path.abspath(os.getcwd()), 'output', '股票列表')
     if not os.path.exists(base_path):
-        os.mkdir(base_path)
+        os.makedirs(base_path)
     file_path = os.path.join(base_path, filename)
     df.to_csv(file_path)
 
-    print('[crawler.getStockList] 上市櫃股票股票清單儲存至 {}'.format(file_path))
+    print('[crawler.getStockList] 上市櫃股票股票清單儲存至 <./output/股票列表/stockList.csv>')
     print('[crawler.getStockList] 完成\n')
     return df
 
-"""Get taiwan stock history"""
-def getAllStockHistory(df, markets, types):
-    print('[crawler.getAllStockHistory] 正在抓取全部個股的歷史紀錄......')
+"""Get taiwan stock histories by specific markets and types"""
+def getAllStockHistories(df, markets, types):
+    print('[crawler.getAllStockHistories] 正在抓取全部個股的歷史紀錄......')
+    print('[crawler.getAllStockHistories] 市場別(markets):', markets)
+    print('[crawler.getAllStockHistories] 類型(types):', types)
 
-    if '上市' in markets:
-        print('[crawler.getAllStockHistory] 開始抓取上市股票(類型={})的歷史紀錄'.format(types))
-        result_df = df[(df['市場別']=='上市') & (df['類型'].isin(types))]
-        sid = list(result_df.index)
-        listed_date = df['上市日'].tolist()
-        _fetchAll(sid, listed_date, market='.TW')
-        
-    if '上櫃' in markets:
-        print('[crawler.getAllStockHistory] 開始抓取上櫃股票(類型={})的歷史紀錄'.format(types))
-        result_df = df[(df['市場別']=='上櫃') & (df['類型'].isin(types))]
-        sid = list(result_df.index)
-        listed_date = df['上市日'].tolist()
-        _fetchAll(sid, listed_date, market='.TWO')
-    
-    print('[crawler.getAllStockHistory] 完成\n')
+    result_df = df[(df['市場別'].isin(markets))&(df['類型'].isin(types))]
 
-"""Get stock real time information"""
+    pbar = tqdm(total=len(result_df), desc='[crawler.getAllStockHistories]')
+    for sid, row in result_df.iterrows():
+        try:
+            if row['市場別'] == '上市':
+                market = '.TW'
+            elif row['市場別'] == '上櫃':
+                market = '.TWO'
+            history_df = data.get_data_yahoo(sid+market, '2000-01-01', date.today().strftime('%Y-%m-%d'))
+            
+            if row['類型'] == '股票':
+                base_path = os.path.join(os.path.abspath(os.getcwd()), 'output', '歷史股價', row['市場別'], row['類型'], row['產業別'])
+            else:
+                base_path = os.path.join(os.path.abspath(os.getcwd()), 'output', '歷史股價', row['市場別'], row['類型'])
+            filename = '{}.csv'.format(sid)
+            if not os.path.exists(base_path):
+                os.makedirs(base_path)
+            file_path = os.path.join(base_path, filename)
+            history_df.to_csv(file_path)
+        except Exception as e:
+            pass
+        sleep(0.1)
+        pbar.update(1)
+    pbar.close()
+
+    print('[crawler.getAllStockHistories] 個股歷史紀錄儲存至 <./output/歷史紀錄/>')
+    print('[crawler.getAllStockHistories] 完成\n')
+
+"""Get stock real time price by given sid"""
 def getRealTime(sid):
-    print('[crawler.getRealTime] 取得選定之個股的當前股價：')
-
-    result = []
-    for stock_numbers in sid:
-        response = requests.get('https://tw.stock.yahoo.com/q/q?s=' + stock_numbers)
-        soup = BeautifulSoup(response.text.replace('加到投資組合', ''), 'lxml')
-        stock_date = soup.find('font', {'class', 'tt'}).getText().strip()[-9:]
-        tables = soup.find_all('table')[2]
-        tds = tables.find_all('td')[0:11]
-        result.append((stock_date,) + tuple(td.getText().strip() for td in tds))
-        sleep(1)
-    df = DataFrame(result, columns=['日期', '股票代號', '時間', '成交', '買進', '賣出', '漲跌', '張數', '昨收', '開盤', '最高', '最低'])
-
-    print('[crawler.getRealTime] 完成\n')
-    return df
+    wrapper(_getRealTime, sid)
 
 """Get financial news"""
 def getNews(start_date, end_date):
@@ -117,7 +123,7 @@ def getNews(start_date, end_date):
     end_date = datetime.strptime(end_date, '%Y-%m-%d %H:%M:%S')
 
     if not os.path.exists(base_path):
-        os.mkdir(base_path)
+        os.makedirs(base_path)
 
     print('[crawler.getNews] 準備抓取台股相關新聞，並儲存至 {}'.format(base_path))
     while current_date <= end_date:
@@ -162,10 +168,31 @@ def getNews(start_date, end_date):
 
 """Get three institutional investors information"""
 def getInstitutionalInvestors():
-    TWSE_URL = 'http://www.twse.com.tw/fund/T86?response=json&date={}&selectType=ALL' # ex: 20210429
-    TPEX_URL = 'http://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php?l=zh-tw&se=AL&t=D&d={}' # ex: 110/04/29
+    TWSE_URL = 'http://www.twse.com.tw/fund/T86?response=json&date={}&selectType=ALL' # ex: 20120502
+    TPEX_URL = 'http://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php?l=zh-tw&se=AL&t=D&d={}' # ex: 106/02/06
 
-    
+    # Get listed company three institutional investors information
+    headers = _getHeaders()
+    url = TWSE_URL.format('20210429')
+    res = requests.get(url, headers=headers)
+    res = json.loads(res.text)
+    res = dict((k, res[k]) for k in ('fields','data') if k in res) # Get sub-dict from res with keys=['fields', 'data']
+    df = DataFrame(res['data'], columns=res['fields'])
+    print(df)
+
+    # Get OCT three institutional investors information
+    headers = _getHeaders()
+    url = TPEX_URL.format('110/05/03')
+    res = requests.get(url, headers=headers)
+    res = json.loads(res.text)
+    res = dict((k, res[k]) for k in ('reportTitle', 'aaData') if k in res) # Get sub-dict from res with keys=['aaData']
+    columns = ['證券代號', '證券名稱', '外陸資買進股數(不含外資自營商)', '外陸資賣出股數(不含外資自營商)', '外陸資買賣超股數(不含外資自營商)', \
+               '外資自營商買進股數', '外資自營商賣出股數', '外資自營商買賣超股數', '外陸資買進股數', '外陸資賣出股數', '外陸資買賣超股數', \
+               '投信買進股數', '投信賣出股數', '投信買賣超股數', '自營商買進股數(自行買賣)', '自營商賣出股數(自行買賣)', '自營商買賣超股數(自行買賣)', \
+               '自營商買進股數(避險)', '自營商賣出股數(避險)', '自營商買賣超股數(避險)', '自營商買進股數', '自營商賣出股數', '自營商買賣超股數', \
+               '三大法人買賣超股數合計', 'unknown']
+    df = DataFrame(res['aaData'], columns=columns)
+    print(df)
 
 """Get fake web headers"""
 def _getHeaders():
@@ -174,28 +201,27 @@ def _getHeaders():
     headers = {'user-agent': user_agent}
     return headers
 
-"""Fetch all stock history of specific market"""
-def _fetchAll(sid, listed_date, market):
-    base_path = os.path.join(os.path.abspath(os.getcwd()), 'output', 'history')
+"""Call by getRealTime function"""
+def _getRealTime(stdscr, sid):
+    stdscr.clear() # Clear screen
+    stdscr.addstr(0, 0, '[crawler.getRealTime] 取得選定之個股的當前股價：')
 
-    for i in tqdm(range(len(sid)), desc='[crawler._fetchAll]'):
-        try:
-            start_date = listed_date[i].replace('/', '-')
-            if int(start_date.split('-')[0]) < 2000:
-                start_date = '2000-01-01'
-            end_date = date.today()
+    while True:
+        result = []
+        for i in range(len(sid)):
+            response = requests.get('https://tw.stock.yahoo.com/q/q?s=' + sid[i])
+            soup = BeautifulSoup(response.text.replace('加到投資組合', ''), 'lxml')
+            stock_date = soup.find('font', {'class', 'tt'}).getText().strip()[-9:]
+            tables = soup.find_all('table')[2]
+            tds = tables.find_all('td')[0:11]
+            result.append((stock_date,) + tuple(td.getText().strip() for td in tds))
 
-            df = data.get_data_yahoo(sid[i]+market, '2010-01-01', end_date)
+        df = DataFrame(result, columns=['日期', '股票代號', '時間', '成交', '買進', '賣出', '漲跌', '張數', '昨收', '開盤', '最高', '最低'])
+        rows = df.to_string().split('\n')
 
-            filename = '{}.csv'.format(sid[i])
-            if not os.path.exists(base_path):
-                os.mkdir(base_path)
-            file_path = os.path.join(base_path, filename)
-            df.to_csv(file_path)
+        for i in range(len(rows)):
+            stdscr.addstr(i+1, 0, rows[i])
 
-        except Exception as e:
-            pass
-
-        sleep(0.1)
-
-    print('[crawler._fetchAll] 個股歷史紀錄已儲存至 {}'.format(base_path))
+        stdscr.refresh()
+        sleep(0.5)
+    stdscr.getkey()
