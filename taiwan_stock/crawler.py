@@ -74,7 +74,9 @@ def getStockList():
     return df
 
 """Get taiwan stock histories by specific markets and types"""
-def getAllStockHistories(df, markets, types):
+def getAllStockHistories(markets, types):
+    df = getStockList()
+
     print('[crawler.getAllStockHistories] 正在抓取全部個股的歷史紀錄......')
     print('[crawler.getAllStockHistories] 市場別(markets):', markets)
     print('[crawler.getAllStockHistories] 類型(types):', types)
