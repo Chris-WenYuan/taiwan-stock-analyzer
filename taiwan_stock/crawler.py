@@ -2,10 +2,10 @@ import os
 import json
 import requests
 
-from curses import wrapper
 from tqdm import tqdm
 from re import findall
 from time import sleep
+from curses import wrapper
 from bs4 import BeautifulSoup
 from pandas_datareader import data
 from fake_useragent import UserAgent
@@ -31,7 +31,7 @@ def getStockList():
     df1 = df1.drop(df1[(df1.市場別!='上市')].index)
     df1.loc[df1['類型'].str.contains('RW'), '類型'] = '上市認購(售)權證'
 
-    sleep(5)
+    sleep(3)
 
     # Crawl taiwan OCT company list from <https://isin.twse.com.tw/isin/C_public.jsp?strMode=4>
     headers = _getHeaders()
@@ -74,7 +74,9 @@ def getStockList():
     return df
 
 """Get taiwan stock histories by specific markets and types"""
-def getAllStockHistories(df, markets, types):
+def getAllStockHistories(markets, types):
+    df = getStockList()
+
     print('[crawler.getAllStockHistories] 正在抓取全部個股的歷史紀錄......')
     print('[crawler.getAllStockHistories] 市場別(markets):', markets)
     print('[crawler.getAllStockHistories] 類型(types):', types)
